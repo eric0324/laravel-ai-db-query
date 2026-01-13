@@ -1,0 +1,69 @@
+{
+    "name": "eric0324/laravel-ai-db-query",
+    "description": "A Laravel package for querying databases using natural language with LLM support",
+    "keywords": [
+        "laravel",
+        "database",
+        "ai",
+        "llm",
+        "natural-language",
+        "sql",
+        "openai",
+        "anthropic",
+        "ollama"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Eric",
+            "email": "eric0324@example.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/database": "^10.0|^11.0",
+        "illuminate/console": "^10.0|^11.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^2.0",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^8.0|^9.0",
+        "pestphp/pest": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Eric0324\\AIDBQuery\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Eric0324\\AIDBQuery\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "test-coverage": "pest --coverage",
+        "analyse": "phpstan analyse --memory-limit=2G",
+        "format": "php-cs-fixer fix"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Eric0324\\AIDBQuery\\SmartQueryServiceProvider"
+            ],
+            "aliases": {
+                "AskDB": "Eric0324\\AIDBQuery\\Facades\\AskDB"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

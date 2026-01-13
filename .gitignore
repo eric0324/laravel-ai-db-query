@@ -1,0 +1,15 @@
+/vendor/
+/node_modules/
+.env
+.phpunit.result.cache
+.phpunit.cache/
+composer.lock
+phpunit.xml
+phpstan.neon
+.php-cs-fixer.cache
+.idea/
+.vscode/
+*.log
+storage/smart-query/
+coverage/
+.pest/
