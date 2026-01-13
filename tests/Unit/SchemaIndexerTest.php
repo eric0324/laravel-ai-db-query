@@ -145,36 +145,48 @@ class SchemaIndexerTest extends TestCase
         $mockEmbedding = Mockery::mock(EmbeddingService::class);
         $mockEmbedding->shouldReceive('getDimension')->andReturn(1536);
 
-        // Different embeddings for each table
+        // Create distinct embeddings - users will have highest similarity with query
         $mockEmbedding->shouldReceive('embed')
             ->andReturnUsing(function ($texts) {
                 $embeddings = [];
-                foreach ($texts as $i => $text) {
-                    // Create distinct embeddings based on table name
+                foreach ($texts as $text) {
+                    // Create unique embeddings based on content
                     if (str_contains($text, 'users')) {
-                        $embeddings[] = array_fill(0, 1536, 0.9);
+                        // Users: [1, 0, 0, 0, ...]
+                        $emb = array_fill(0, 1536, 0.0);
+                        $emb[0] = 1.0;
+                        $embeddings[] = $emb;
                     } elseif (str_contains($text, 'orders')) {
-                        $embeddings[] = array_fill(0, 1536, 0.5);
+                        // Orders: [0, 1, 0, 0, ...]
+                        $emb = array_fill(0, 1536, 0.0);
+                        $emb[1] = 1.0;
+                        $embeddings[] = $emb;
                     } else {
-                        $embeddings[] = array_fill(0, 1536, 0.1);
+                        // Products: [0, 0, 1, 0, ...]
+                        $emb = array_fill(0, 1536, 0.0);
+                        $emb[2] = 1.0;
+                        $embeddings[] = $emb;
                     }
                 }
 
                 return $embeddings;
             });
 
-        // Query embedding for "users"
-        $mockEmbedding->shouldReceive('embedSingle')
-            ->andReturn(array_fill(0, 1536, 0.9));
+        // Query embedding matches users exactly: [1, 0, 0, 0, ...]
+        $queryEmb = array_fill(0, 1536, 0.0);
+        $queryEmb[0] = 1.0;
+        $mockEmbedding->shouldReceive('embedSingle')->andReturn($queryEmb);
 
         $this->indexer->setEmbeddingService($mockEmbedding);
         $this->indexer->setSchemaManager($this->schemaManager);
         $this->indexer->index();
 
-        $results = $this->indexer->findRelevantTables('How many users registered?', 2);
+        $results = $this->indexer->findRelevantTables('How many users registered?', 3);
 
         $this->assertNotEmpty($results);
-        $this->assertEquals('users', $results[0]['table_name']); // Most relevant
+        // Users should have similarity 1.0, others should have 0.0
+        $this->assertEquals('users', $results[0]['table_name']);
+        $this->assertEquals(1.0, $results[0]['score'], '', 0.01);
     }
 
     public function test_skips_unchanged_tables_on_reindex(): void
@@ -183,7 +195,7 @@ class SchemaIndexerTest extends TestCase
         $mockEmbedding = Mockery::mock(EmbeddingService::class);
         $mockEmbedding->shouldReceive('getDimension')->andReturn(1536);
         $mockEmbedding->shouldReceive('embed')
-            ->twice() // Should only be called once per index
+            ->once() // Only called on first index, skipped on second
             ->andReturnUsing(function ($texts) {
                 return array_map(fn () => array_fill(0, 1536, 0.1), $texts);
             });
@@ -195,7 +207,7 @@ class SchemaIndexerTest extends TestCase
         $result1 = $this->indexer->index();
         $this->assertEquals(3, $result1['indexed']);
 
-        // Second index (should skip all)
+        // Second index (should skip all - no embed call)
         $result2 = $this->indexer->index();
         $this->assertEquals(0, $result2['indexed']);
         $this->assertEquals(3, $result2['skipped']);
@@ -207,7 +219,7 @@ class SchemaIndexerTest extends TestCase
         $mockEmbedding = Mockery::mock(EmbeddingService::class);
         $mockEmbedding->shouldReceive('getDimension')->andReturn(1536);
         $mockEmbedding->shouldReceive('embed')
-            ->times(2) // Called for both indexes
+            ->twice() // Called for both indexes
             ->andReturnUsing(function ($texts) {
                 return array_map(fn () => array_fill(0, 1536, 0.1), $texts);
             });
