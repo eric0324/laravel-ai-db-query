@@ -157,18 +157,22 @@ class SmartQuery
         // Set up schema manager with current connection
         $this->schemaManager->setConnection($this->connection);
 
+        // Get the database connection and driver name
+        $connection = $this->connection
+            ? DB::connection($this->connection)
+            : DB::connection();
+        $databaseType = $this->getDatabaseTypeName($connection->getDriverName());
+
         // Get schema for the question
         $schema = $this->schemaManager->getSchemaForQuestion(
             $question,
             ! empty($this->tables) ? $this->tables : null
         );
 
-        // Build prompts
-        $systemPrompt = str_replace(
-            '{schema}',
-            $schema,
-            $this->config['prompts']['system'] ?? ''
-        );
+        // Build prompts with database type
+        $systemPrompt = $this->config['prompts']['system'] ?? '';
+        $systemPrompt = str_replace('{database}', $databaseType, $systemPrompt);
+        $systemPrompt = str_replace('{schema}', $schema, $systemPrompt);
 
         $userPrompt = str_replace(
             '{question}',
@@ -185,6 +189,20 @@ class SmartQuery
         $this->queryGuard->validate($sql);
 
         return $sql;
+    }
+
+    /**
+     * Get human-readable database type name.
+     */
+    protected function getDatabaseTypeName(string $driver): string
+    {
+        return match ($driver) {
+            'mysql', 'mariadb' => 'MySQL',
+            'pgsql' => 'PostgreSQL',
+            'sqlite' => 'SQLite',
+            'sqlsrv' => 'SQL Server',
+            default => $driver,
+        };
     }
 
     /**
