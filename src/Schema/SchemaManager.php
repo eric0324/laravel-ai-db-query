@@ -127,9 +127,7 @@ class SchemaManager
      */
     protected function fetchTables(): array
     {
-        $connection = $this->getConnection();
-        $tables = $connection->getDoctrineSchemaManager()?->listTableNames()
-            ?? $this->getTablesFromInformationSchema();
+        $tables = $this->getTablesFromInformationSchema();
 
         // Apply include filter
         $includeTables = $this->config['tables'] ?? [];
