@@ -66,9 +66,14 @@ class QueryGuard
      */
     protected function cleanMarkdown(string $sql): string
     {
-        // Remove ```sql ... ``` blocks
-        $sql = preg_replace('/^```(?:sql)?\s*/i', '', $sql);
-        $sql = preg_replace('/\s*```$/', '', $sql);
+        // Extract content from ```sql ... ``` blocks
+        if (preg_match('/```(?:sql)?\s*\n?(.*?)\n?```/is', $sql, $matches)) {
+            return trim($matches[1]);
+        }
+
+        // Remove standalone ``` markers
+        $sql = preg_replace('/^```(?:sql)?\s*/im', '', $sql);
+        $sql = preg_replace('/\s*```$/m', '', $sql);
 
         return trim($sql);
     }
@@ -154,16 +159,27 @@ class QueryGuard
             return $response;
         }
 
-        // Remove markdown code blocks
-        $response = $this->cleanMarkdown($response);
+        // Try to extract from markdown code blocks first
+        if (preg_match('/```(?:sql)?\s*\n?([\s\S]*?)\n?```/i', $response, $matches)) {
+            $response = trim($matches[1]);
+        } else {
+            // Remove any remaining markdown markers
+            $response = $this->cleanMarkdown($response);
+        }
 
         // Remove leading explanatory text before SELECT
-        if (preg_match('/SELECT\b.+$/is', $response, $matches)) {
+        if (preg_match('/\bSELECT\b[\s\S]+$/i', $response, $matches)) {
             $response = $matches[0];
         }
 
         // Remove trailing semicolon if present
-        $response = rtrim($response, ';');
+        $response = rtrim(trim($response), ';');
+
+        // Remove any trailing explanation after the query
+        // Look for common patterns like newline followed by text
+        if (preg_match('/^(SELECT\b[^;]+?)(?:\n\n|\nThis|\nNote:|$)/is', $response, $matches)) {
+            $response = $matches[1];
+        }
 
         return trim($response);
     }
